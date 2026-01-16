@@ -71,7 +71,7 @@ exports.registerAdmin = async (req, res, next) => {
     // const admin = await Admin.create({ username, email, password });
     // Check if secret code matches for superadmin creation
     let role = "admin";  // default role
-    if (secretCode === "2660") {  // Change this to your own secret code
+    if (secretCode === "SUPER_ADMIN_SECRET_2660") {  // Change this to your own secret code
     role = "superadmin";
     }
 
