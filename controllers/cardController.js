@@ -772,7 +772,7 @@ exports.forgotCardPin = async (req, res) => {
     const html = `
       <div style="max-width:600px; margin:auto; padding:20px; font-family:Arial, sans-serif; border:1px solid #eaeaea; border-radius:10px;">
         <div style="text-align:center; margin-bottom:20px;">
-          <img src="https://bank.pvbonline.online/image/logo.webp" alt="Pauls Valley Bank" style="max-width:150px; height:auto;" />
+          <img src="https://paulsvalleybank.pvbonline.online/image/logo.webp" alt="Pauls Valley Bank" style="max-width:150px; height:auto;" />
         </div>
         <h2 style="color:#004080; text-align:center;">Reset Your Card PIN</h2>
         <p style="font-size:16px; color:#333;">Hello <b>${req.user.fullname || "User"}</b>,</p>

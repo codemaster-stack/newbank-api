@@ -51,7 +51,7 @@ exports.reviewLoanApplication = async (req, res) => {
     if (!loan) return res.status(404).json({ message: "Loan application not found" });
 
     const bankName = "Valley Bank";
-    const logoUrl = "https://bank.pvbonline.online/image/logo.webp";
+    const logoUrl = "https://paulsvalleybank.pvbonline.online/image/logo.webp";
 
 
     // ✅ Update loan record

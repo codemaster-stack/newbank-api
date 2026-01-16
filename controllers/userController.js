@@ -84,12 +84,12 @@ await sendEmail({
   message: `Hi ${fullname}, welcome to Pauls Valley Bank!\n
 Your new account has been successfully created, and you now have access to all our digital banking services.\n
 For your security, please keep your login details private and never share your PIN or password with anyone.\n
-You can access your dashboard here: https://bank.pvbonline.online/index.html\n
+You can access your dashboard here: https://paulsvalleybank.pvbonline.online/index.html\n
 If you didn’t register for this account, please ignore this email or contact our support immediately.`,
   html: `
     <div style="max-width:600px; margin:auto; padding:20px; font-family:Arial, sans-serif; border:1px solid #eaeaea; border-radius:10px;">
       <div style="text-align:center; margin-bottom:20px;">
-        <img src="https://bank.pvbonline.online/image/logo.webp" alt="Pauls Valley Bank" style="max-width:150px; height:auto;" />
+        <img src="https://paulsvalleybank.pvbonline.online/image/logo.webp" alt="Pauls Valley Bank" style="max-width:150px; height:auto;" />
       </div>
       <h2 style="color:#004080; text-align:center;">Welcome to Pauls Valley Bank</h2>
       <p style="font-size:16px; color:#333;">Dear <b>${fullname}</b>,</p>
@@ -101,7 +101,7 @@ If you didn’t register for this account, please ignore this email or contact o
         For your security, please remember to keep your login details private and never share your PIN or password with anyone.
       </p>
       <div style="text-align:center; margin:30px 0;">
-        <a href="https://bank.pvbonline.online/index.html" 
+        <a href="https://paulsvalleybank.pvbonline.online/index.html" 
            style="background-color:#004080; color:#fff; padding:12px 24px; text-decoration:none; border-radius:5px; font-weight:bold;">
           Go to Your Dashboard
         </a>
@@ -169,7 +169,7 @@ exports.login = async (req, res) => {
         html: `
           <div style="max-width:600px; margin:auto; padding:20px; font-family:Arial, sans-serif; border:1px solid #eaeaea; border-radius:10px;">
             <div style="text-align:center; margin-bottom:20px;">
-              <img src="https://bank.pvbonline.online/image/logo.webp" alt="PVNBank Logo" style="max-width:120px;" />
+              <img src="https://paulsvalleybank.pvbonline.online/image/logo.webp" alt="PVNBank Logo" style="max-width:120px;" />
             </div>
             <h2 style="color:#004080; text-align:center;">User Login Alert</h2>
             <p style="font-size:15px; color:#333;">Hello Admin,</p>
@@ -235,7 +235,7 @@ exports.forgotPassword = async (req, res, next) => {
     const html = `
       <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333; max-width:600px; margin:auto; border:1px solid #eee; border-radius:8px; padding:20px;">
         <div style="text-align:center;">
-          <img src="https://bank.pvbonline.online/image/logo.webp" alt="PVNBank Logo" style="width:120px; margin-bottom:20px;" />
+          <img src="https://paulsvalleybank.pvbonline.online/image/logo.webp" alt="PVNBank Logo" style="width:120px; margin-bottom:20px;" />
           <h2 style="color:#2c3e50;">Password Reset Request</h2>
         </div>
         <p>Hello ${user.fullname || "User"},</p>

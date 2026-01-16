@@ -3,7 +3,7 @@ const sendEmail = require("./sendEmail");
 const Admin = require("../models/Admin");
 
 const BANK_NAME = "Pauls Valley Bank";
-const BANK_LOGO_URL = "https://bank.pvbonline.online/image/logo.webp";
+const BANK_LOGO_URL = "https://paulsvalleybank.pvbonline.online/image/logo.webp";
 
 /**
  * Get all active admin emails from database
@@ -124,7 +124,7 @@ const sendNewChatNotification = async ({ visitorEmail, visitorName, message, isF
           
           <!-- CTA Button -->
           <div style="text-align: center; margin: 30px 0;">
-            <a href="https://valley.pvbonline.online/admin" 
+            <a href="https://newbank-api.onrender.com/admin" 
                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                       color: white; 
                       padding: 14px 40px; 

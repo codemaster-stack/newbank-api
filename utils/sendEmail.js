@@ -14,7 +14,7 @@ const sendEmail = async ({ email, subject, message, html, attachment }) => {
     const recipients = Array.isArray(email) ? email : [email]; // support multiple recipients
 
  const emailData = {
-  from: "Pauls Valley Bank <support@pvbonline.online>",
+  from: "Pauls Valley Bank <contact@pvbonline.online>",
   to: recipients,
   subject,
   html: html || `<p>${message}</p>`,

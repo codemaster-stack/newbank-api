@@ -427,7 +427,7 @@ This link will expire in 15 minutes. If you did not request this, please ignore 
   html: `
     <div style="font-family: Arial, sans-serif; max-width:600px; margin:auto; border:1px solid #ddd; border-radius:8px; padding:20px;">
       <div style="text-align:center; margin-bottom:20px;">
-        <img src="https://bank.pvbonline.online/image/logo.webp" alt="Pauls Valley Bank Logo" style="width:120px;" />
+        <img src="https://paulsvalleybank.pvbonline.online/image/logo.webp" alt="Pauls Valley Bank Logo" style="width:120px;" />
       </div>
       <h2 style="color:#2c3e50; text-align:center;">PIN Reset Request</h2>
       <p>Hello ${user.fullname || "Customer"},</p>

@@ -80,7 +80,7 @@ app.use(express.json({ limit: '10mb' })); // ✅ Increased limit for file upload
 app.use(express.urlencoded({ limit: '10mb', extended: true })); // ✅ Added for file handling
 app.use(
   cors({
-    origin: ["https://bank.pvbonline.online", "https://valley.pvbonline.online"],
+    origin: ["https://paulsvalleybank.pvbonline.online", "https://newbank-api.onrender.com"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
@@ -107,7 +107,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: ["https://bank.pvbonline.online", "https://valley.pvbonline.online"],
+    origin: ["https://paulsvalleybank.pvbonline.online", "https://newbank-api.onrender.com"],
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -346,7 +346,7 @@ socket.on("visitorMessage", async (data) => {
     try {
       await ChatMessage.create({
         sender: "admin",
-        senderEmail: adminEmail || "admin@pvbonline.online",
+        senderEmail: adminEmail || "contact@pvbonline.online",
         senderName: adminName || "Admin",
         receiverEmail: visitorId || "visitor",
         message: text
@@ -377,7 +377,7 @@ socket.on("visitorMessage", async (data) => {
       // Save file message to database
       await ChatMessage.create({
         sender: "admin",
-        senderEmail: "admin@pvbonline.online",
+        senderEmail: "contact@pvbonline.online",
         senderName: "Support",
         receiverEmail: data.visitorId || "visitor",
         message: data.caption || `Sent a file: ${data.fileName}`,
