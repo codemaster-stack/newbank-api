@@ -564,35 +564,6 @@ exports.getAllTransactions = async (req, res) => {
 
 
 
-// exports.getAllTransactions = async (req, res) => {
-//     try {
-//         let transactions = [...database.transactions];
-        
-//         // Filter by userId if provided
-//         if (req.query.userId) {
-//             transactions = transactions.filter(t => t.userId === parseInt(req.query.userId));
-//         }
-        
-//         // Filter by status if provided
-//         if (req.query.status) {
-//             transactions = transactions.filter(t => t.status === req.query.status);
-//         }
-        
-//         // Filter by type if provided
-//         if (req.query.type) {
-//             transactions = transactions.filter(t => t.type === req.query.type);
-//         }
-        
-//         // Sort by date (newest first)
-//         transactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        
-//         res.json(transactions);
-//     } catch (error) {
-//         console.error('Error fetching transactions:', error);
-//         res.status(500).json({ error: 'Failed to fetch transactions' });
-//     }
-// };
-
 // Get single transaction by ID
 exports.getTransactionById = async (req, res) => {
     try {
@@ -627,8 +598,9 @@ exports.getUserTransactions = async (req, res) => {
 
 exports.updateTransaction = async (req, res) => {
     try {
-        const transactionId = parseInt(req.params.id);
-        const transactionIndex = database.transactions.findIndex(t => t.id === transactionId);
+       const transactionId = req.params.id; // keep as string
+       const transactionIndex = database.transactions.findIndex(t => t._id === transactionId);
+
         
         if (transactionIndex === -1) {
             return res.status(404).json({ error: 'Transaction not found' });
@@ -673,7 +645,7 @@ exports.updateTransaction = async (req, res) => {
 exports.updateTransactionStatus = async (req, res) => {
     try {
         const transactionId = parseInt(req.params.id);
-        const transactionIndex = database.transactions.findIndex(t => t.id === transactionId);
+        const transactionIndex = database.transactions.findIndex(t => t._id === transactionId);
         
         if (transactionIndex === -1) {
             return res.status(404).json({ error: 'Transaction not found' });
@@ -702,8 +674,9 @@ exports.updateTransactionStatus = async (req, res) => {
 // Delete transaction
 exports.deleteTransaction = async (req, res) => {
     try {
-        const transactionId = parseInt(req.params.id);
-        const transactionIndex = database.transactions.findIndex(t => t.id === transactionId);
+       const transactionId = req.params.id;
+       const transactionIndex = database.transactions.findIndex(t => t._id === transactionId);
+
         
         if (transactionIndex === -1) {
             return res.status(404).json({ error: 'Transaction not found' });
