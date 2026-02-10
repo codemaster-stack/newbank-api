@@ -565,21 +565,37 @@ exports.getAllTransactions = async (req, res) => {
 
 
 // Get single transaction by ID
+// exports.getTransactionById = async (req, res) => {
+//     try {
+//         const transactionId = parseInt(req.params.id);
+//         const transaction = database.transactions.find(t => t.id === transactionId);
+        
+//         if (!transaction) {
+//             return res.status(404).json({ error: 'Transaction not found' });
+//         }
+        
+//         res.json(transaction);
+//     } catch (error) {
+//         console.error('Error fetching transaction:', error);
+//         res.status(500).json({ error: 'Failed to fetch transaction' });
+//     }
+// };
 exports.getTransactionById = async (req, res) => {
-    try {
-        const transactionId = parseInt(req.params.id);
-        const transaction = database.transactions.find(t => t.id === transactionId);
-        
-        if (!transaction) {
-            return res.status(404).json({ error: 'Transaction not found' });
-        }
-        
-        res.json(transaction);
-    } catch (error) {
-        console.error('Error fetching transaction:', error);
-        res.status(500).json({ error: 'Failed to fetch transaction' });
+  try {
+    const transactionId = req.params.id; // keep as string
+    const transaction = await Transaction.findById(transactionId);
+
+    if (!transaction) {
+      return res.status(404).json({ error: 'Transaction not found' });
     }
+
+    res.json(transaction);
+  } catch (error) {
+    console.error('Error fetching transaction:', error);
+    res.status(500).json({ error: 'Failed to fetch transaction' });
+  }
 };
+
 
 // Get user's transactions
 exports.getUserTransactions = async (req, res) => {
@@ -667,46 +683,7 @@ exports.deleteTransaction = async (req, res) => {
   }
 };
 
-// Get transaction statistics
-// exports.getTransactionStats = async (req, res) => {
-//     try {
-//         const userId = req.query.userId ? parseInt(req.query.userId) : null;
-//         let transactions = userId 
-//             ? database.transactions.filter(t => t.userId === userId)
-//             : database.transactions;
-        
-//         const stats = {
-//             total: transactions.length,
-//             byStatus: {
-//                 pending: transactions.filter(t => t.status === 'pending').length,
-//                 completed: transactions.filter(t => t.status === 'completed').length,
-//                 failed: transactions.filter(t => t.status === 'failed').length,
-//                 cancelled: transactions.filter(t => t.status === 'cancelled').length
-//             },
-//             byType: {
-//                 deposit: transactions.filter(t => t.type === 'deposit').length,
-//                 withdrawal: transactions.filter(t => t.type === 'withdrawal').length,
-//                 transfer: transactions.filter(t => t.type === 'transfer').length,
-//                 loan: transactions.filter(t => t.type === 'loan').length,
-//                 payment: transactions.filter(t => t.type === 'payment').length
-//             },
-//             totalAmount: {
-//                 all: transactions.reduce((sum, t) => sum + t.amount, 0),
-//                 completed: transactions
-//                     .filter(t => t.status === 'completed')
-//                     .reduce((sum, t) => sum + t.amount, 0),
-//                 pending: transactions
-//                     .filter(t => t.status === 'pending')
-//                     .reduce((sum, t) => sum + t.amount, 0)
-//             }
-//         };
-        
-//         res.json(stats);
-//     } catch (error) {
-//         console.error('Error fetching transaction stats:', error);
-//         res.status(500).json({ error: 'Failed to fetch transaction statistics' });
-//     }
-// };
+
 exports.getTransactionStats = async (req, res) => {
   try {
     const query = {};
