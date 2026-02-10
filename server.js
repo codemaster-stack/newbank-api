@@ -74,6 +74,7 @@ const { Server } = require("socket.io");
 connectDB();
 
 const app = express();
+app.disable('etag');
 
 // Middleware
 app.use(express.json({ limit: '10mb' })); // ✅ Increased limit for file uploads
