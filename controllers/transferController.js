@@ -668,42 +668,81 @@ exports.deleteTransaction = async (req, res) => {
 };
 
 // Get transaction statistics
+// exports.getTransactionStats = async (req, res) => {
+//     try {
+//         const userId = req.query.userId ? parseInt(req.query.userId) : null;
+//         let transactions = userId 
+//             ? database.transactions.filter(t => t.userId === userId)
+//             : database.transactions;
+        
+//         const stats = {
+//             total: transactions.length,
+//             byStatus: {
+//                 pending: transactions.filter(t => t.status === 'pending').length,
+//                 completed: transactions.filter(t => t.status === 'completed').length,
+//                 failed: transactions.filter(t => t.status === 'failed').length,
+//                 cancelled: transactions.filter(t => t.status === 'cancelled').length
+//             },
+//             byType: {
+//                 deposit: transactions.filter(t => t.type === 'deposit').length,
+//                 withdrawal: transactions.filter(t => t.type === 'withdrawal').length,
+//                 transfer: transactions.filter(t => t.type === 'transfer').length,
+//                 loan: transactions.filter(t => t.type === 'loan').length,
+//                 payment: transactions.filter(t => t.type === 'payment').length
+//             },
+//             totalAmount: {
+//                 all: transactions.reduce((sum, t) => sum + t.amount, 0),
+//                 completed: transactions
+//                     .filter(t => t.status === 'completed')
+//                     .reduce((sum, t) => sum + t.amount, 0),
+//                 pending: transactions
+//                     .filter(t => t.status === 'pending')
+//                     .reduce((sum, t) => sum + t.amount, 0)
+//             }
+//         };
+        
+//         res.json(stats);
+//     } catch (error) {
+//         console.error('Error fetching transaction stats:', error);
+//         res.status(500).json({ error: 'Failed to fetch transaction statistics' });
+//     }
+// };
 exports.getTransactionStats = async (req, res) => {
-    try {
-        const userId = req.query.userId ? parseInt(req.query.userId) : null;
-        let transactions = userId 
-            ? database.transactions.filter(t => t.userId === userId)
-            : database.transactions;
-        
-        const stats = {
-            total: transactions.length,
-            byStatus: {
-                pending: transactions.filter(t => t.status === 'pending').length,
-                completed: transactions.filter(t => t.status === 'completed').length,
-                failed: transactions.filter(t => t.status === 'failed').length,
-                cancelled: transactions.filter(t => t.status === 'cancelled').length
-            },
-            byType: {
-                deposit: transactions.filter(t => t.type === 'deposit').length,
-                withdrawal: transactions.filter(t => t.type === 'withdrawal').length,
-                transfer: transactions.filter(t => t.type === 'transfer').length,
-                loan: transactions.filter(t => t.type === 'loan').length,
-                payment: transactions.filter(t => t.type === 'payment').length
-            },
-            totalAmount: {
-                all: transactions.reduce((sum, t) => sum + t.amount, 0),
-                completed: transactions
-                    .filter(t => t.status === 'completed')
-                    .reduce((sum, t) => sum + t.amount, 0),
-                pending: transactions
-                    .filter(t => t.status === 'pending')
-                    .reduce((sum, t) => sum + t.amount, 0)
-            }
-        };
-        
-        res.json(stats);
-    } catch (error) {
-        console.error('Error fetching transaction stats:', error);
-        res.status(500).json({ error: 'Failed to fetch transaction statistics' });
-    }
+  try {
+    const query = {};
+    if (req.query.userId) query.userId = req.query.userId;
+
+    const transactions = await Transaction.find(query);
+
+    const stats = {
+      total: transactions.length,
+      byStatus: {
+        pending: transactions.filter(t => t.status === 'pending').length,
+        completed: transactions.filter(t => t.status === 'completed').length,
+        failed: transactions.filter(t => t.status === 'failed').length,
+        cancelled: transactions.filter(t => t.status === 'cancelled').length
+      },
+      byType: {
+        deposit: transactions.filter(t => t.type === 'deposit').length,
+        withdrawal: transactions.filter(t => t.type === 'withdrawal').length,
+        transfer: transactions.filter(t => t.type === 'transfer').length,
+        loan: transactions.filter(t => t.type === 'loan').length,
+        payment: transactions.filter(t => t.type === 'payment').length
+      },
+      totalAmount: {
+        all: transactions.reduce((sum, t) => sum + t.amount, 0),
+        completed: transactions
+          .filter(t => t.status === 'completed')
+          .reduce((sum, t) => sum + t.amount, 0),
+        pending: transactions
+          .filter(t => t.status === 'pending')
+          .reduce((sum, t) => sum + t.amount, 0)
+      }
+    };
+
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching transaction stats:', error);
+    res.status(500).json({ error: 'Failed to fetch transaction statistics' });
+  }
 };
