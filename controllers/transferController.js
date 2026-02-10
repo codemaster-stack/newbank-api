@@ -534,37 +534,64 @@ exports.getTransactionHistory = async (req, res) => {
 
 
 
-
-
-
 exports.getAllTransactions = async (req, res) => {
-    try {
-        let transactions = [...database.transactions];
-        
-        // Filter by userId if provided
-        if (req.query.userId) {
-            transactions = transactions.filter(t => t.userId === parseInt(req.query.userId));
-        }
-        
-        // Filter by status if provided
-        if (req.query.status) {
-            transactions = transactions.filter(t => t.status === req.query.status);
-        }
-        
-        // Filter by type if provided
-        if (req.query.type) {
-            transactions = transactions.filter(t => t.type === req.query.type);
-        }
-        
-        // Sort by date (newest first)
-        transactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        
-        res.json(transactions);
-    } catch (error) {
-        console.error('Error fetching transactions:', error);
-        res.status(500).json({ error: 'Failed to fetch transactions' });
+  try {
+    const query = {};
+
+    // Optional filters
+    if (req.query.userId) {
+      query.userId = req.query.userId;
     }
+
+    if (req.query.status) {
+      query.status = req.query.status;
+    }
+
+    if (req.query.type) {
+      query.type = req.query.type;
+    }
+
+    const transactions = await Transaction.find(query)
+      .populate('userId', 'name email username')
+      .sort({ createdAt: -1 });
+
+    res.json(transactions);
+  } catch (error) {
+    console.error('Error fetching all transactions:', error);
+    res.status(500).json({ message: 'Failed to fetch transactions' });
+  }
 };
+
+
+
+// exports.getAllTransactions = async (req, res) => {
+//     try {
+//         let transactions = [...database.transactions];
+        
+//         // Filter by userId if provided
+//         if (req.query.userId) {
+//             transactions = transactions.filter(t => t.userId === parseInt(req.query.userId));
+//         }
+        
+//         // Filter by status if provided
+//         if (req.query.status) {
+//             transactions = transactions.filter(t => t.status === req.query.status);
+//         }
+        
+//         // Filter by type if provided
+//         if (req.query.type) {
+//             transactions = transactions.filter(t => t.type === req.query.type);
+//         }
+        
+//         // Sort by date (newest first)
+//         transactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
+//         res.json(transactions);
+//     } catch (error) {
+//         console.error('Error fetching transactions:', error);
+//         res.status(500).json({ error: 'Failed to fetch transactions' });
+//     }
+// };
 
 // Get single transaction by ID
 exports.getTransactionById = async (req, res) => {
