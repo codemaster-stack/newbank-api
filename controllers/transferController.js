@@ -1220,48 +1220,80 @@ exports.getUserTransactions = async (req, res) => {
     }
 };
 
+// exports.updateTransaction = async (req, res) => {
+//     try {
+//         const transactionId = parseInt(req.params.id);
+//         const transactionIndex = database.transactions.findIndex(t => t.id === transactionId);
+        
+//         if (transactionIndex === -1) {
+//             return res.status(404).json({ error: 'Transaction not found' });
+//         }
+        
+//         const { userId, type, amount, status, description, reference } = req.body;
+//         const existingTransaction = database.transactions[transactionIndex];
+        
+//         // Validation
+//         if (type && !['deposit', 'withdrawal', 'transfer', 'loan', 'payment'].includes(type)) {
+//             return res.status(400).json({ error: 'Invalid transaction type' });
+//         }
+        
+//         if (status && !['pending', 'completed', 'failed', 'cancelled'].includes(status)) {
+//             return res.status(400).json({ error: 'Invalid transaction status' });
+//         }
+        
+//         // Update transaction
+//         database.transactions[transactionIndex] = {
+//             ...existingTransaction,
+//             userId: userId ? parseInt(userId) : existingTransaction.userId,
+//             type: type ? type.toLowerCase() : existingTransaction.type,
+//             amount: amount ? parseFloat(amount) : existingTransaction.amount,
+//             status: status ? status.toLowerCase() : existingTransaction.status,
+//             description: description !== undefined ? description : existingTransaction.description,
+//             reference: reference !== undefined ? reference : existingTransaction.reference,
+//             updatedAt: new Date().toISOString()
+//         };
+        
+//         saveDatabase();
+        
+//         console.log(`✓ Updated transaction ID: ${transactionId}`);
+//         res.json(database.transactions[transactionIndex]);
+        
+//     } catch (error) {
+//         console.error('Error updating transaction:', error);
+//         res.status(500).json({ error: 'Failed to update transaction' });
+//     }
+// };
+
+
 exports.updateTransaction = async (req, res) => {
-    try {
-        const transactionId = parseInt(req.params.id);
-        const transactionIndex = database.transactions.findIndex(t => t.id === transactionId);
-        
-        if (transactionIndex === -1) {
-            return res.status(404).json({ error: 'Transaction not found' });
-        }
-        
-        const { userId, type, amount, status, description, reference } = req.body;
-        const existingTransaction = database.transactions[transactionIndex];
-        
-        // Validation
-        if (type && !['deposit', 'withdrawal', 'transfer', 'loan', 'payment'].includes(type)) {
-            return res.status(400).json({ error: 'Invalid transaction type' });
-        }
-        
-        if (status && !['pending', 'completed', 'failed', 'cancelled'].includes(status)) {
-            return res.status(400).json({ error: 'Invalid transaction status' });
-        }
-        
-        // Update transaction
-        database.transactions[transactionIndex] = {
-            ...existingTransaction,
-            userId: userId ? parseInt(userId) : existingTransaction.userId,
-            type: type ? type.toLowerCase() : existingTransaction.type,
-            amount: amount ? parseFloat(amount) : existingTransaction.amount,
-            status: status ? status.toLowerCase() : existingTransaction.status,
-            description: description !== undefined ? description : existingTransaction.description,
-            reference: reference !== undefined ? reference : existingTransaction.reference,
-            updatedAt: new Date().toISOString()
-        };
-        
-        saveDatabase();
-        
-        console.log(`✓ Updated transaction ID: ${transactionId}`);
-        res.json(database.transactions[transactionIndex]);
-        
-    } catch (error) {
-        console.error('Error updating transaction:', error);
-        res.status(500).json({ error: 'Failed to update transaction' });
+  try {
+    const transactionId = req.params.id;
+
+    const transaction = await Transaction.findById(transactionId);
+
+    if (!transaction) {
+      return res.status(404).json({ error: 'Transaction not found' });
     }
+
+    const { type, amount, status, description, reference } = req.body;
+
+    if (type) transaction.type = type.toLowerCase();
+    if (amount) transaction.amount = parseFloat(amount);
+    if (status) transaction.status = status.toLowerCase();
+    if (description !== undefined) transaction.description = description;
+    if (reference !== undefined) transaction.reference = reference;
+
+   await transaction.save();
+
+// 🔥 Recalculate user's balance after admin update
+await recalculateUserBalance(transaction.userId);
+
+res.json(transaction);
+
+  } catch (error) {
+    console.error('Error updating transaction:', error);
+    res.status(500).json({ error: 'Failed to update transaction' });
+  }
 };
 
 // Update transaction status only
@@ -1295,29 +1327,51 @@ exports.updateTransactionStatus = async (req, res) => {
 };
 
 // Delete transaction
+// exports.deleteTransaction = async (req, res) => {
+//     try {
+//         const transactionId = parseInt(req.params.id);
+//         const transactionIndex = database.transactions.findIndex(t => t.id === transactionId);
+        
+//         if (transactionIndex === -1) {
+//             return res.status(404).json({ error: 'Transaction not found' });
+//         }
+        
+//         const transaction = database.transactions[transactionIndex];
+//         database.transactions.splice(transactionIndex, 1);
+//         saveDatabase();
+        
+//         console.log(`✓ Deleted transaction ID: ${transactionId}`);
+//         res.json({ 
+//             message: 'Transaction deleted successfully',
+//             deletedTransaction: transaction
+//         });
+        
+//     } catch (error) {
+//         console.error('Error deleting transaction:', error);
+//         res.status(500).json({ error: 'Failed to delete transaction' });
+//     }
+// };
+
 exports.deleteTransaction = async (req, res) => {
-    try {
-        const transactionId = parseInt(req.params.id);
-        const transactionIndex = database.transactions.findIndex(t => t.id === transactionId);
-        
-        if (transactionIndex === -1) {
-            return res.status(404).json({ error: 'Transaction not found' });
-        }
-        
-        const transaction = database.transactions[transactionIndex];
-        database.transactions.splice(transactionIndex, 1);
-        saveDatabase();
-        
-        console.log(`✓ Deleted transaction ID: ${transactionId}`);
-        res.json({ 
-            message: 'Transaction deleted successfully',
-            deletedTransaction: transaction
-        });
-        
-    } catch (error) {
-        console.error('Error deleting transaction:', error);
-        res.status(500).json({ error: 'Failed to delete transaction' });
-    }
+  try {
+    const transactionId = req.params.id;
+
+    const transaction = await Transaction.findByIdAndDelete(transactionId);
+
+if (!transaction) return res.status(404).json({ error: 'Transaction not found' });
+
+// 🔥 Recalculate user's balance after deletion
+await recalculateUserBalance(transaction.userId);
+
+res.json({
+  message: 'Transaction deleted successfully',
+  deletedTransaction: transaction
+});
+
+  } catch (error) {
+    console.error('Error deleting transaction:', error);
+    res.status(500).json({ error: 'Failed to delete transaction' });
+  }
 };
 
 // Get transaction statistics
