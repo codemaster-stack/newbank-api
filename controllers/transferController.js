@@ -608,35 +608,30 @@ const sendTransactionEmail = require("../utils/sendTransactionEmail");
 async function recalculateUserBalance(userId) {
   const transactions = await Transaction.find({ userId });
 
-  let balances = {
-    savings: 0,
-    current: 0,
-    inflow: 0,
-    outflow: 0
-  };
+  let totalBalance = 0;
 
   transactions.forEach(txn => {
-    if (txn.status !== "completed") return;
-
-    const amount = txn.amount || 0;
-    const type = txn.type?.toLowerCase();
-
-    if (["inflow", "deposit", "loan"].includes(type)) {
-      balances.inflow += amount;
+    if (txn.type === "inflow") {
+      totalBalance += txn.amount;
     }
 
-    if (["outflow", "withdrawal", "transfer", "payment"].includes(type)) {
-      balances.outflow += amount;
-    }
-
-    if (txn.accountType && ["savings", "current"].includes(txn.accountType)) {
-      const sign = ["inflow", "deposit", "loan"].includes(type) ? 1 : -1;
-      balances[txn.accountType] += sign * amount;
+    if (txn.type === "outflow") {
+      totalBalance -= txn.amount;
     }
   });
 
-  await User.findByIdAndUpdate(userId, { balances });
+  // Update Account balance (assuming one account per user)
+  await Account.updateMany(
+    { userId },
+    { balance: totalBalance }
+  );
+
+  // Optional: keep User model synced
+  await User.findByIdAndUpdate(userId, {
+    "balances.savings": totalBalance
+  });
 }
+
 
 
 const fs = require('fs');
