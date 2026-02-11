@@ -571,3 +571,16 @@ exports.getTransactionStats = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch transaction statistics' });
   }
 };
+
+
+// Get single transaction by ID
+exports.getTransactionById = async (req, res) => {
+  try {
+    const transaction = await Transaction.findById(req.params.id);
+    if (!transaction) return res.status(404).json({ error: 'Transaction not found' });
+    res.json(transaction);
+  } catch (error) {
+    console.error('Error fetching transaction:', error);
+    res.status(500).json({ error: 'Failed to fetch transaction' });
+  }
+};
