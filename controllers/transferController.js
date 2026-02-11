@@ -14,21 +14,27 @@ const sendTransactionEmail = require("../utils/sendTransactionEmail");
 async function recalculateUserBalance(userId) {
   const transactions = await Transaction.find({ userId });
 
-  // Initialize balances object (match your schema)
+  // Initialize balances
   const balances = { savings: 0, current: 0, inflow: 0, outflow: 0 };
 
   transactions.forEach(txn => {
-    // Adjust for type
-    if (txn.type === "inflow" || txn.type === "deposit" || txn.type === "transfer" || txn.type === "loan") {
-      balances.inflow += txn.amount;
-    } else if (txn.type === "outflow" || txn.type === "withdrawal" || txn.type === "payment") {
-      balances.outflow += txn.amount;
+    const amount = txn.amount || 0;
+    const type = txn.type?.toLowerCase();
+
+    // Update inflow/outflow totals
+    if (["inflow", "deposit", "loan"].includes(type)) {
+      balances.inflow += amount;
+    } else if (["outflow", "withdrawal", "payment", "transfer"].includes(type)) {
+      balances.outflow += amount;
     }
 
-    // Optional: if you have accountType field, track per account
-    if (txn.accountType) {
+    // Update specific account
+    if (txn.accountType && ["savings", "current"].includes(txn.accountType)) {
       if (!balances[txn.accountType]) balances[txn.accountType] = 0;
-      balances[txn.accountType] += txn.type === "inflow" ? txn.amount : -txn.amount;
+
+      // Determine sign: + for deposit/inflow, - for withdrawal/outflow
+      const sign = ["inflow", "deposit", "loan"].includes(type) ? 1 : -1;
+      balances[txn.accountType] += sign * amount;
     }
   });
 
