@@ -18,6 +18,9 @@ async function recalculateUserBalance(userId) {
   const balances = { savings: 0, current: 0, inflow: 0, outflow: 0 };
 
   transactions.forEach(txn => {
+    // Only include transactions that are completed
+    if (txn.status !== "completed") return;
+
     const amount = txn.amount || 0;
     const type = txn.type?.toLowerCase();
 
@@ -40,6 +43,7 @@ async function recalculateUserBalance(userId) {
 
   await User.findByIdAndUpdate(userId, { balances });
 }
+
 
 
 const fs = require('fs');
