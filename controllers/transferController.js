@@ -605,72 +605,32 @@ const admin = require("../models/Admin")
 const sendTransactionEmail = require("../utils/sendTransactionEmail");
 
 // 🔥 Recalculate user balance from all completed transactions
-async function recalculateUserBalance(userId) {
+async function recalculateUserBalances(userId) {
   const transactions = await Transaction.find({ userId });
 
-  let totalBalance = 0;
+  let current = 0;
+  let savings = 0;
+  let inflow = 0;
+  let outflow = 0;
 
-  transactions.forEach(txn => {
-    if (txn.type === "inflow") {
-      totalBalance += txn.amount;
-    }
-
-    if (txn.type === "outflow") {
-      totalBalance -= txn.amount;
+  transactions.forEach(tx => {
+    if (tx.type === "inflow") {
+      current += tx.amount; // you can add to savings if needed
+      inflow += tx.amount;
+    } else if (tx.type === "outflow") {
+      current -= tx.amount;
+      outflow += tx.amount;
     }
   });
 
-  // Update Account balance (assuming one account per user)
-  await Account.updateMany(
-    { userId },
-    { balance: totalBalance }
-  );
-
-  // Optional: keep User model synced
   await User.findByIdAndUpdate(userId, {
-    "balances.savings": totalBalance
+    "balances.current": current,
+    "balances.savings": savings,
+    "balances.inflow": inflow,
+    "balances.outflow": outflow,
   });
 }
 
-
-
-const fs = require('fs');
-const path = require('path');
-
-// Database file path
-const DATA_FILE = path.join(__dirname, '../transactions-data.json');
-
-// Database object
-let database = {
-    transactions: [],
-    nextId: 1
-};
-
-// Load database
-function loadDatabase() {
-    try {
-        if (fs.existsSync(DATA_FILE)) {
-            const data = fs.readFileSync(DATA_FILE, 'utf8');
-            database = JSON.parse(data);
-        } else {
-            saveDatabase();
-        }
-    } catch (error) {
-        console.error('Error loading transactions database:', error);
-    }
-}
-
-// Save database
-function saveDatabase() {
-    try {
-        fs.writeFileSync(DATA_FILE, JSON.stringify(database, null, 2), 'utf8');
-    } catch (error) {
-        console.error('Error saving transactions database:', error);
-    }
-}
-
-// Initialize database
-loadDatabase();
 
 exports.transfer = async (req, res) => {
   try {
@@ -1005,198 +965,229 @@ exports.getTransactionHistory = async (req, res) => {
   }
 };
 
-
-
-exports.getAllTransactions = async (req, res) => {
+exports.getAllTransactions = async (req,res) => {
   try {
     const query = {};
-
-    // Optional filters
-    if (req.query.userId) {
-      query.userId = req.query.userId;
-    }
-
-    if (req.query.status) {
-      query.status = req.query.status;
-    }
-
-    if (req.query.type) {
-      query.type = req.query.type;
-    }
+    if (req.query.userId) query.userId = req.query.userId;
+    if (req.query.status) query.status = req.query.status;
+    if (req.query.type) query.type = req.query.type;
 
     const transactions = await Transaction.find(query)
-      .populate('userId', 'name email username')
-      .sort({ createdAt: -1 });
-
+      .populate("userId","fullname email")
+      .sort({ createdAt:-1 });
     res.json(transactions);
   } catch (error) {
-    console.error('Error fetching all transactions:', error);
-    res.status(500).json({ message: 'Failed to fetch transactions' });
+    console.error("Error fetching all transactions:", error);
+    res.status(500).json({ message:"Failed to fetch transactions" });
   }
 };
 
 
-
-// Get single transaction by ID
 exports.getTransactionById = async (req, res) => {
-    try {
-        const transactionId = parseInt(req.params.id);
-        const transaction = database.transactions.find(t => t.id === transactionId);
-        
-        if (!transaction) {
-            return res.status(404).json({ error: 'Transaction not found' });
-        }
-        
-        res.json(transaction);
-    } catch (error) {
-        console.error('Error fetching transaction:', error);
-        res.status(500).json({ error: 'Failed to fetch transaction' });
+  try {
+    const transaction = await Transaction.findById(req.params.id)
+      .populate("userId", "fullname email");
+
+    if (!transaction) {
+      return res.status(404).json({ message: "Transaction not found" });
     }
+
+    res.json(transaction);
+  } catch (error) {
+    console.error("Error fetching transaction:", error);
+    res.status(500).json({ message: "Failed to fetch transaction" });
+  }
 };
 
-// Get user's transactions
-exports.getUserTransactions = async (req, res) => {
-    try {
-        const userId = parseInt(req.params.userId);
-        const transactions = database.transactions
-            .filter(t => t.userId === userId)
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        
-        res.json(transactions);
-    } catch (error) {
-        console.error('Error fetching user transactions:', error);
-        res.status(500).json({ error: 'Failed to fetch user transactions' });
-    }
-};
+
 
 
 exports.updateTransaction = async (req, res) => {
   try {
-    const transactionId = req.params.id;
+    const { type, amount, description } = req.body;
 
-    const transaction = await Transaction.findById(transactionId);
+    const transaction = await Transaction.findById(req.params.id);
 
     if (!transaction) {
-      return res.status(404).json({ error: 'Transaction not found' });
+      return res.status(404).json({ message: "Transaction not found" });
     }
 
-    const { type, amount, status, description, reference } = req.body;
+    transaction.type = type;
+    transaction.amount = amount;
+    transaction.description = description;
 
-    if (type) transaction.type = type.toLowerCase();
-    if (amount) transaction.amount = parseFloat(amount);
-    if (status) transaction.status = status.toLowerCase();
-    if (description !== undefined) transaction.description = description;
-    if (reference !== undefined) transaction.reference = reference;
+    await transaction.save();
 
-   await transaction.save();
+    await recalculateUserBalances(transaction.userId);
 
-// 🔥 Recalculate user's balance after admin update
-await recalculateUserBalance(transaction.userId);
-
-res.json(transaction);
-
+    res.json(transaction);
   } catch (error) {
-    console.error('Error updating transaction:', error);
-    res.status(500).json({ error: 'Failed to update transaction' });
+    console.error("Update transaction error:", error);
+    res.status(500).json({ message: "Failed to update transaction" });
   }
 };
 
-// Update transaction status only
-exports.updateTransactionStatus = async (req, res) => {
-    try {
-        const transactionId = parseInt(req.params.id);
-        const transactionIndex = database.transactions.findIndex(t => t.id === transactionId);
-        
-        if (transactionIndex === -1) {
-            return res.status(404).json({ error: 'Transaction not found' });
-        }
-        
-        const { status } = req.body;
-        
-        if (!status || !['pending', 'completed', 'failed', 'cancelled'].includes(status)) {
-            return res.status(400).json({ error: 'Invalid status' });
-        }
-        
-        database.transactions[transactionIndex].status = status.toLowerCase();
-        database.transactions[transactionIndex].updatedAt = new Date().toISOString();
-        
-        saveDatabase();
-        
-        console.log(`✓ Updated transaction status: ${transactionId} -> ${status}`);
-        res.json(database.transactions[transactionIndex]);
-        
-    } catch (error) {
-        console.error('Error updating transaction status:', error);
-        res.status(500).json({ error: 'Failed to update transaction status' });
-    }
-};
 
 
-exports.deleteTransaction = async (req, res) => {
+
+exports.getUserTransactions = async (req, res) => {
   try {
-    const transactionId = req.params.id;
+    const transactions = await Transaction.find({
+      userId: req.params.userId,
+    }).sort({ createdAt: -1 });
 
-    const transaction = await Transaction.findByIdAndDelete(transactionId);
-
-if (!transaction) return res.status(404).json({ error: 'Transaction not found' });
-
-// 🔥 Recalculate user's balance after deletion
-await recalculateUserBalance(transaction.userId);
-
-res.json({
-  message: 'Transaction deleted successfully',
-  deletedTransaction: transaction
-});
-
+    res.json(transactions);
   } catch (error) {
-    console.error('Error deleting transaction:', error);
-    res.status(500).json({ error: 'Failed to delete transaction' });
+    console.error("Error fetching user transactions:", error);
+    res.status(500).json({ message: "Failed to fetch user transactions" });
   }
 };
 
-// Get transaction statistics
-exports.getTransactionStats = async (req, res) => {
-    try {
-        const userId = req.query.userId ? parseInt(req.query.userId) : null;
-        let transactions = userId 
-            ? database.transactions.filter(t => t.userId === userId)
-            : database.transactions;
-        
-        const stats = {
-            total: transactions.length,
-            byStatus: {
-                pending: transactions.filter(t => t.status === 'pending').length,
-                completed: transactions.filter(t => t.status === 'completed').length,
-                failed: transactions.filter(t => t.status === 'failed').length,
-                cancelled: transactions.filter(t => t.status === 'cancelled').length
-            },
-            byType: {
-                deposit: transactions.filter(t => t.type === 'deposit').length,
-                withdrawal: transactions.filter(t => t.type === 'withdrawal').length,
-                transfer: transactions.filter(t => t.type === 'transfer').length,
-                loan: transactions.filter(t => t.type === 'loan').length,
-                payment: transactions.filter(t => t.type === 'payment').length
-            },
-            totalAmount: {
-                all: transactions.reduce((sum, t) => sum + t.amount, 0),
-                completed: transactions
-                    .filter(t => t.status === 'completed')
-                    .reduce((sum, t) => sum + t.amount, 0),
-                pending: transactions
-                    .filter(t => t.status === 'pending')
-                    .reduce((sum, t) => sum + t.amount, 0)
-            }
-        };
-        
-        res.json(stats);
-    } catch (error) {
-        console.error('Error fetching transaction stats:', error);
-        res.status(500).json({ error: 'Failed to fetch transaction statistics' });
-    }
+
+
+exports.deleteTransaction = async (req,res) => {
+  try {
+    const transaction = await Transaction.findById(req.params.id);
+    if (!transaction) return res.status(404).json({ message:"Transaction not found" });
+
+    await Transaction.findByIdAndDelete(req.params.id);
+    await recalculateUserBalances(transaction.userId);
+
+    res.json({ message:"Transaction deleted successfully" });
+  } catch (error) {
+    console.error("Delete transaction error:", error);
+    res.status(500).json({ message:"Failed to delete transaction" });
+  }
+};
+
+
+exports.getTransactionStats = async (req,res) => {
+  try {
+    const transactions = await Transaction.find();
+
+    const stats = {
+      total: transactions.length,
+      totalInflow: transactions.filter(t => t.type==="inflow").reduce((sum,t)=>sum+t.amount,0),
+      totalOutflow: transactions.filter(t => t.type==="outflow").reduce((sum,t)=>sum+t.amount,0),
+      pending: transactions.filter(t => t.status==="pending_review").length,
+      completed: transactions.filter(t => t.status==="completed").length,
+      failed: transactions.filter(t => t.status==="failed").length,
+      cancelled: transactions.filter(t => t.status==="cancelled").length
+    };
+
+    res.json(stats);
+  } catch (error) {
+    console.error("Error fetching stats:", error);
+    res.status(500).json({ message:"Failed to fetch transaction stats" });
+  }
 };
 
 
 
+// // Get transaction statistics
+// exports.getTransactionStats = async (req, res) => {
+//     try {
+//         const userId = req.query.userId ? parseInt(req.query.userId) : null;
+//         let transactions = userId 
+//             ? database.transactions.filter(t => t.userId === userId)
+//             : database.transactions;
+        
+//         const stats = {
+//             total: transactions.length,
+//             byStatus: {
+//                 pending: transactions.filter(t => t.status === 'pending').length,
+//                 completed: transactions.filter(t => t.status === 'completed').length,
+//                 failed: transactions.filter(t => t.status === 'failed').length,
+//                 cancelled: transactions.filter(t => t.status === 'cancelled').length
+//             },
+//             byType: {
+//                 deposit: transactions.filter(t => t.type === 'deposit').length,
+//                 withdrawal: transactions.filter(t => t.type === 'withdrawal').length,
+//                 transfer: transactions.filter(t => t.type === 'transfer').length,
+//                 loan: transactions.filter(t => t.type === 'loan').length,
+//                 payment: transactions.filter(t => t.type === 'payment').length
+//             },
+//             totalAmount: {
+//                 all: transactions.reduce((sum, t) => sum + t.amount, 0),
+//                 completed: transactions
+//                     .filter(t => t.status === 'completed')
+//                     .reduce((sum, t) => sum + t.amount, 0),
+//                 pending: transactions
+//                     .filter(t => t.status === 'pending')
+//                     .reduce((sum, t) => sum + t.amount, 0)
+//             }
+//         };
+        
+//         res.json(stats);
+//     } catch (error) {
+//         console.error('Error fetching transaction stats:', error);
+//         res.status(500).json({ error: 'Failed to fetch transaction statistics' });
+//     }
+// };
+
+
+
+
+
+// const fs = require('fs');
+// const path = require('path');
+
+// // Database file path
+// const DATA_FILE = path.join(__dirname, '../transactions-data.json');
+
+// // Database object
+// let database = {
+//     transactions: [],
+//     nextId: 1
+// };
+
+// // Load database
+// function loadDatabase() {
+//     try {
+//         if (fs.existsSync(DATA_FILE)) {
+//             const data = fs.readFileSync(DATA_FILE, 'utf8');
+//             database = JSON.parse(data);
+//         } else {
+//             saveDatabase();
+//         }
+//     } catch (error) {
+//         console.error('Error loading transactions database:', error);
+//     }
+// }
+
+// // Save database
+// function saveDatabase() {
+//     try {
+//         fs.writeFileSync(DATA_FILE, JSON.stringify(database, null, 2), 'utf8');
+//     } catch (error) {
+//         console.error('Error saving transactions database:', error);
+//     }
+// }
+
+// // Initialize database
+// loadDatabase();
+
+// exports.deleteTransaction = async (req, res) => {
+//   try {
+//     const transactionId = req.params.id;
+
+//     const transaction = await Transaction.findByIdAndDelete(transactionId);
+
+// if (!transaction) return res.status(404).json({ error: 'Transaction not found' });
+
+// // 🔥 Recalculate user's balance after deletion
+// await recalculateUserBalance(transaction.userId);
+
+// res.json({
+//   message: 'Transaction deleted successfully',
+//   deletedTransaction: transaction
+// });
+
+//   } catch (error) {
+//     console.error('Error deleting transaction:', error);
+//     res.status(500).json({ error: 'Failed to delete transaction' });
+//   }
+// };
 
 // Delete transaction
 // exports.deleteTransaction = async (req, res) => {
@@ -1223,6 +1214,40 @@ exports.getTransactionStats = async (req, res) => {
 //         res.status(500).json({ error: 'Failed to delete transaction' });
 //     }
 // };
+
+
+
+// exports.updateTransaction = async (req, res) => {
+//   try {
+//     const transactionId = req.params.id;
+
+//     const transaction = await Transaction.findById(transactionId);
+
+//     if (!transaction) {
+//       return res.status(404).json({ error: 'Transaction not found' });
+//     }
+
+//     const { type, amount, status, description, reference } = req.body;
+
+//     if (type) transaction.type = type.toLowerCase();
+//     if (amount) transaction.amount = parseFloat(amount);
+//     if (status) transaction.status = status.toLowerCase();
+//     if (description !== undefined) transaction.description = description;
+//     if (reference !== undefined) transaction.reference = reference;
+
+//    await transaction.save();
+
+// // 🔥 Recalculate user's balance after admin update
+// await recalculateUserBalance(transaction.userId);
+
+// res.json(transaction);
+
+//   } catch (error) {
+//     console.error('Error updating transaction:', error);
+//     res.status(500).json({ error: 'Failed to update transaction' });
+//   }
+// };
+
 
 // exports.updateTransaction = async (req, res) => {
 //     try {
@@ -1445,4 +1470,68 @@ exports.getTransactionStats = async (req, res) => {
 //     console.error("Transfer error:", error);
 //     res.status(500).json({ message: "Transfer failed. Please try again." });
 //   }
+// };
+
+
+
+// Get single transaction by ID
+// exports.getTransactionById = async (req, res) => {
+//     try {
+//         const transactionId = parseInt(req.params.id);
+//         const transaction = database.transactions.find(t => t.id === transactionId);
+        
+//         if (!transaction) {
+//             return res.status(404).json({ error: 'Transaction not found' });
+//         }
+        
+//         res.json(transaction);
+//     } catch (error) {
+//         console.error('Error fetching transaction:', error);
+//         res.status(500).json({ error: 'Failed to fetch transaction' });
+//     }
+// };
+
+// // Get user's transactions
+// exports.getUserTransactions = async (req, res) => {
+//     try {
+//         const userId = parseInt(req.params.userId);
+//         const transactions = database.transactions
+//             .filter(t => t.userId === userId)
+//             .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
+//         res.json(transactions);
+//     } catch (error) {
+//         console.error('Error fetching user transactions:', error);
+//         res.status(500).json({ error: 'Failed to fetch user transactions' });
+//     }
+// };
+
+// // Update transaction status only
+// exports.updateTransactionStatus = async (req, res) => {
+//     try {
+//         const transactionId = parseInt(req.params.id);
+//         const transactionIndex = database.transactions.findIndex(t => t.id === transactionId);
+        
+//         if (transactionIndex === -1) {
+//             return res.status(404).json({ error: 'Transaction not found' });
+//         }
+        
+//         const { status } = req.body;
+        
+//         if (!status || !['pending', 'completed', 'failed', 'cancelled'].includes(status)) {
+//             return res.status(400).json({ error: 'Invalid status' });
+//         }
+        
+//         database.transactions[transactionIndex].status = status.toLowerCase();
+//         database.transactions[transactionIndex].updatedAt = new Date().toISOString();
+        
+//         saveDatabase();
+        
+//         console.log(`✓ Updated transaction status: ${transactionId} -> ${status}`);
+//         res.json(database.transactions[transactionIndex]);
+        
+//     } catch (error) {
+//         console.error('Error updating transaction status:', error);
+//         res.status(500).json({ error: 'Failed to update transaction status' });
+//     }
 // };
