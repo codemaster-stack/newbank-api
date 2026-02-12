@@ -1082,7 +1082,35 @@ exports.getTransactionStats = async (req,res) => {
   }
 };
 
-
+// // Update transaction status only
+exports.updateTransactionStatus = async (req, res) => {
+    try {
+        const transactionId = parseInt(req.params.id);
+        const transactionIndex = database.transactions.findIndex(t => t.id === transactionId);
+        
+        if (transactionIndex === -1) {
+            return res.status(404).json({ error: 'Transaction not found' });
+        }
+        
+        const { status } = req.body;
+        
+        if (!status || !['pending', 'completed', 'failed', 'cancelled'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status' });
+        }
+        
+        database.transactions[transactionIndex].status = status.toLowerCase();
+        database.transactions[transactionIndex].updatedAt = new Date().toISOString();
+        
+        saveDatabase();
+        
+        console.log(`✓ Updated transaction status: ${transactionId} -> ${status}`);
+        res.json(database.transactions[transactionIndex]);
+        
+    } catch (error) {
+        console.error('Error updating transaction status:', error);
+        res.status(500).json({ error: 'Failed to update transaction status' });
+    }
+};
 
 // // Get transaction statistics
 // exports.getTransactionStats = async (req, res) => {
@@ -1506,32 +1534,3 @@ exports.getTransactionStats = async (req,res) => {
 //     }
 // };
 
-// // Update transaction status only
-// exports.updateTransactionStatus = async (req, res) => {
-//     try {
-//         const transactionId = parseInt(req.params.id);
-//         const transactionIndex = database.transactions.findIndex(t => t.id === transactionId);
-        
-//         if (transactionIndex === -1) {
-//             return res.status(404).json({ error: 'Transaction not found' });
-//         }
-        
-//         const { status } = req.body;
-        
-//         if (!status || !['pending', 'completed', 'failed', 'cancelled'].includes(status)) {
-//             return res.status(400).json({ error: 'Invalid status' });
-//         }
-        
-//         database.transactions[transactionIndex].status = status.toLowerCase();
-//         database.transactions[transactionIndex].updatedAt = new Date().toISOString();
-        
-//         saveDatabase();
-        
-//         console.log(`✓ Updated transaction status: ${transactionId} -> ${status}`);
-//         res.json(database.transactions[transactionIndex]);
-        
-//     } catch (error) {
-//         console.error('Error updating transaction status:', error);
-//         res.status(500).json({ error: 'Failed to update transaction status' });
-//     }
-// };
