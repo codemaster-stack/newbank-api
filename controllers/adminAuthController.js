@@ -1,4 +1,5 @@
 // controllers/adminAuthController.js
+const mongoose = require("mongoose");
 const Admin = require("../models/Admin");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
