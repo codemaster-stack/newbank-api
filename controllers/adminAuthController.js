@@ -312,76 +312,6 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
-// exports.deleteUser = async (req, res) => {
-//   try {
-//     const { email } = req.params;
-    
-//     console.log('🗑️ Attempting to delete user:', email);
-    
-//     // Get admin info (works with both req.user and req.admin)
-//     const admin = req.user || req.admin;
-    
-//     if (!admin) {
-//       console.error('❌ No admin found in request');
-//       return res.status(401).json({ message: 'Admin authentication failed' });
-//     }
-    
-//     console.log('👮 Admin deleting user:', { adminEmail: admin.email, adminRole: admin.role });
-    
-//     const user = await User.findOne({ email });
-    
-//     if (!user) {
-//       console.log('❌ User not found:', email);
-//       return res.status(404).json({ message: 'User not found' });
-//     }
-    
-//     // Check if already deleted
-//     if (user.isDeleted) {
-//       return res.status(400).json({ message: 'User is already in recycle bin' });
-//     }
-    
-//     console.log('✅ User found, moving to recycle bin');
-    
-//     // Soft delete - move to recycle bin instead of permanent delete
-//     user.isDeleted = true;
-//     user.deletedAt = new Date();
-//     user.deletedBy = admin._id;
-//     user.deletedByAdminId = admin.role || 'admin';
-//     await user.save();
-    
-//     console.log('✅ User moved to recycle bin successfully');
-    
-//     // Optional: Log this action
-//     const Transaction = require('../models/Transaction'); // Make sure path is correct
-//     await Transaction.create({
-//       userId: admin._id,
-//       type: 'admin_action',
-//       transactionId: `DEL_${Date.now()}`,
-//       amount: 0,
-//       description: `Deleted user: ${user.email}`,
-//       accountType: 'admin',
-//       createdAt: new Date()
-//     }).catch(err => console.error('Failed to log deletion:', err));
-    
-//     res.json({ 
-//       message: 'User moved to recycle bin successfully',
-//       deletedBy: admin.role,
-//       deletedUser: {
-//         email: user.email,
-//         firstName: user.firstName,
-//         lastName: user.lastName
-//       }
-//     });
-    
-//   } catch (error) {
-//     console.error('❌ Delete user error:', error);
-//     console.error('Error stack:', error.stack);
-//     res.status(500).json({ 
-//       message: 'Failed to delete user',
-//       error: process.env.NODE_ENV === 'development' ? error.message : undefined
-//     });
-//   }
-// };
 
 
 // Restore user from recycle bin (Super Admin only)
@@ -424,26 +354,7 @@ exports.restoreUser = async (req, res) => {
     res.status(500).json({ message: 'Failed to restore user' });
   }
 };
-// exports.restoreUser = async (req, res) => {
-//   try {
-//     const { email } = req.params;
-//     const user = await User.findOne({ email, isDeleted: true });
-    
-//     if (!user) {
-//       return res.status(404).json({ message: 'User not found in recycle bin' });
-//     }
-    
-//     user.isDeleted = false;
-//     user.deletedAt = null;
-//     user.deletedBy = null;
-//     await user.save();
-    
-//     res.json({ message: 'User restored successfully' });
-//   } catch (error) {
-//     console.error('Restore user error:', error);
-//     res.status(500).json({ message: 'Failed to restore user' });
-//   }
-// };
+
 
 // Get all deleted users (Super Admin only)
 exports.getDeletedUsers = async (req, res) => {
@@ -457,32 +368,6 @@ exports.getDeletedUsers = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch deleted users' });
   }
 };
-// exports.getDeletedUsers = async (req, res) => {
-//   try {
-//     const deletedUsers = await User.find({ isDeleted: true }).select('-password -transactionPin');
-//     res.json({ users: deletedUsers });
-//   } catch (error) {
-//     console.error('Get deleted users error:', error);
-//     res.status(500).json({ message: 'Failed to fetch deleted users' });
-//   }
-// };
-
-// Permanent delete (Super Admin only)
-// exports.permanentDeleteUser = async (req, res) => {
-//   try {
-//     const { email } = req.params;
-//     const user = await User.findOneAndDelete({ email, isDeleted: true });
-    
-//     if (!user) {
-//       return res.status(404).json({ message: 'User not found in recycle bin' });
-//     }
-    
-//     res.json({ message: 'User permanently deleted' });
-//   } catch (error) {
-//     console.error('Permanent delete error:', error);
-//     res.status(500).json({ message: 'Failed to permanently delete user' });
-//   }
-// };
 
 exports.permanentDeleteUser = async (req, res) => {
   try {
@@ -705,8 +590,8 @@ exports.fundUser = async (req, res) => {
     });
 
 const totalBalance = (user.balances.savings || 0) + 
-                     (user.balances.current || 0) + 
-                     (user.balances.loan || 0);
+ (user.balances.current || 0) + 
+  (user.balances.loan || 0);
 
 // Send transaction emails
 await sendTransactionEmail({

@@ -108,7 +108,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: ["https://paulsvalleybank.pvbonline.online", "https://newbank-api.onrender.com"],
+    origin: ["https://paulsvalleybank.pvbonline.online", "https://newbank-api-x9ho.onrender.com"],
     methods: ["GET", "POST"],
     credentials: true,
   },
