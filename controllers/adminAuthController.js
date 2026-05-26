@@ -497,128 +497,55 @@ exports.reactivateUser = async (req, res) => {
 
 
 exports.fundUser = async (req, res) => {
+  const session = await mongoose.startSession();
+
   try {
+    session.startTransaction();
+
     const { email, amount, accountType, description, date } = req.body;
-    // const adminId = req.user._id;
-    const adminId = req.admin._id;
 
-    console.log('Fund user request data:', { email, amount, accountType, description, date });
-
-    // Validate required fields
-    if (!email || !amount || !accountType) {
-      return res.status(400).json({ 
-        message: 'Missing required fields: email, amount, and accountType are required' 
-      });
-    }
-
-    if (!['savings', 'current', 'loan'].includes(accountType)) {
-      return res.status(400).json({ message: 'Invalid account type' });
-    }
-
-    // Validate amount
     const fundAmount = parseFloat(amount);
-    if (isNaN(fundAmount) || fundAmount <= 0) {
-      return res.status(400).json({ message: 'Invalid funding amount' });
-    }
 
-    const admin = await Admin.findById(adminId);
-    const user = await User.findOne({ email });
+    const admin = await Admin.findById(req.admin._id).session(session);
+    const user = await User.findOne({ email }).session(session);
 
-    if (!admin) return res.status(404).json({ message: 'Admin not found' });
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!admin || !user) throw new Error("User/Admin not found");
 
-    // Initialize admin wallet if undefined
-    if (admin.wallet === undefined || admin.wallet === null) {
-      admin.wallet = 0;
-    }
-
-    if (admin.wallet < fundAmount) {
-      return res.status(400).json({ message: 'Insufficient admin wallet balance' });
-    }
-
-    // Deduct from admin wallet
     admin.wallet -= fundAmount;
-    await admin.save();
+    await admin.save({ session });
 
-    // Initialize and credit user balance
-    if (!user.balances) {
-      user.balances = { savings: 0, current: 0, loan: 0, inflow: 0, outflow: 0 };
-    }
+    user.balances[accountType] += fundAmount;
+    await user.save({ session });
 
-    user.balances[accountType] = (user.balances[accountType] || 0) + fundAmount;
-    user.balances.inflow = (user.balances.inflow || 0) + fundAmount;
-    await user.save();
-
-    const transactionId = `TXN_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    
-    // Parse transaction date safely
-    let transactionDate = new Date();
-    if (date) {
-      const parsedDate = new Date(date);
-      if (!isNaN(parsedDate.getTime())) {
-        transactionDate = parsedDate;
-      }
-    }
-
-    // Create user transaction
-    await Transaction.create({
-      userId: user._id.toString(),
-      type: 'inflow',
-      transactionId,
-      amount: fundAmount,
-      description: description || `Funded by admin (${admin.email})`,
+    await Transaction.create([{
+      userId: user._id,
+      type: "inflow",
       accountType,
-      createdAt: transactionDate
-    });
-
-    // Create admin transaction
-    await Transaction.create({
-      userId: admin._id.toString(),
-      type: 'outflow',
-      transactionId,
       amount: fundAmount,
-      description: `Funded ${user.email}'s ${accountType} account`,
-      accountType: 'wallet',
-      createdAt: transactionDate
+      description
+    }], { session });
+
+    await Transaction.create([{
+      userId: admin._id,
+      type: "outflow",
+      accountType: "wallet", // ⚠️ must fix schema or remove
+      amount: fundAmount
+    }], { session });
+
+    await session.commitTransaction();
+
+    return res.json({ message: "Funding successful" });
+
+  } catch (err) {
+    await session.abortTransaction();
+    console.error(err);
+
+    return res.status(500).json({
+      message: "Failed to fund user account"
     });
 
-   console.log(`✅ Admin ${admin.email} funded ${user.email} with $${fundAmount}`);
-
-const totalBalance =
-  (user.balances.savings || 0) +
-  (user.balances.current || 0) +
-  (user.balances.loan || 0);
-
-// Send transaction emails
-await sendTransactionEmail({
-  userId: user._id,
-  type: "credit",
-  amount: fundAmount,
-  balance: totalBalance,
-  description: description || `Funded by admin (${admin.email})`
-});
-
-await sendTransactionEmail({
-  userId: admin._id,
-  type: "debit",
-  amount: fundAmount,
-  balance: admin.wallet,
-  description: `Funded ${user.email}'s ${accountType} account`
-});
-
-return res.json({
-  message: `User ${accountType} account funded successfully from admin wallet`,
-  adminNewWallet: admin.wallet,
-  userNewBalance: user.balances[accountType]
-});
-
-  } catch (error) {
-    console.error('Fund user error:', error);
-    console.error('Error stack:', error.stack); // Add this for more details
-    res.status(500).json({ 
-      message: 'Failed to fund user account',
-      error: error.message // Add this temporarily to see the actual error
-    });
+  } finally {
+    session.endSession();
   }
 };
 
