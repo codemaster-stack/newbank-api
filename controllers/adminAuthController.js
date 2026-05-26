@@ -499,7 +499,8 @@ exports.reactivateUser = async (req, res) => {
 exports.fundUser = async (req, res) => {
   try {
     const { email, amount, accountType, description, date } = req.body;
-    const adminId = req.user._id;
+    // const adminId = req.user._id;
+    const adminId = req.admin._id;
 
     console.log('Fund user request data:', { email, amount, accountType, description, date });
 
@@ -581,16 +582,11 @@ exports.fundUser = async (req, res) => {
       createdAt: transactionDate
     });
 
-    console.log(`✅ Admin ${admin.email} funded ${user.email} with $${fundAmount}`);
+   console.log(`✅ Admin ${admin.email} funded ${user.email} with $${fundAmount}`);
 
-    res.json({
-      message: `User ${accountType} account funded successfully from admin wallet`,
-      adminNewWallet: admin.wallet,
-      userNewBalance: user.balances[accountType]
-    });
-
-const totalBalance = (user.balances.savings || 0) + 
- (user.balances.current || 0) + 
+const totalBalance =
+  (user.balances.savings || 0) +
+  (user.balances.current || 0) +
   (user.balances.loan || 0);
 
 // Send transaction emails
@@ -598,7 +594,7 @@ await sendTransactionEmail({
   userId: user._id,
   type: "credit",
   amount: fundAmount,
-  balance: totalBalance,  // ✅ NOW shows combined balance
+  balance: totalBalance,
   description: description || `Funded by admin (${admin.email})`
 });
 
@@ -608,6 +604,12 @@ await sendTransactionEmail({
   amount: fundAmount,
   balance: admin.wallet,
   description: `Funded ${user.email}'s ${accountType} account`
+});
+
+return res.json({
+  message: `User ${accountType} account funded successfully from admin wallet`,
+  adminNewWallet: admin.wallet,
+  userNewBalance: user.balances[accountType]
 });
 
   } catch (error) {
@@ -642,6 +644,24 @@ exports.transferFunds = async (req, res) => {
     }
     
     const transferAmount = parseFloat(amount);
+    
+    const validAccounts = ["savings", "current", "loan", "fixed"];
+
+if (
+  !validAccounts.includes(fromAccount) ||
+  !validAccounts.includes(toAccount)
+) {
+  return res.status(400).json({
+    message: "Invalid account type"
+  });
+}
+
+if (isNaN(transferAmount) || transferAmount <= 0) {
+  return res.status(400).json({
+    message: "Invalid transfer amount"
+  });
+}
+
     
     // Check balance and update balances
     if (sender.balances[fromAccount] < transferAmount) {
@@ -960,45 +980,58 @@ exports.fundAdminWallet = async (req, res, next) => {
     const { adminId, amount } = req.body;
 
     if (!adminId || !amount) {
-      return res.status(400).json({ message: "Admin ID and amount are required" });
+      return res.status(400).json({
+        message: "Admin ID and amount are required",
+      });
     }
 
-    if (amount <= 0) {
-      return res.status(400).json({ message: "Amount must be greater than 0" });
+    const parsedAmount = parseFloat(amount);
+
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return res.status(400).json({
+        message: "Amount must be greater than 0",
+      });
     }
 
     const admin = await Admin.findById(adminId);
+
     if (!admin) {
-      return res.status(404).json({ message: "Admin not found" });
+      return res.status(404).json({
+        message: "Admin not found",
+      });
     }
 
     if (admin.role === "superadmin") {
-      return res.status(400).json({ message: "Cannot fund superadmin wallet" });
+      return res.status(400).json({
+        message: "Cannot fund superadmin wallet",
+      });
     }
 
-    admin.wallet += parseFloat(amount);
+    // Initialize wallet if missing
+  if (admin.wallet == null) {
+  admin.wallet = 0;
+}
+
+    // Add funds
+    admin.wallet += parsedAmount;
+
     await admin.save();
 
-    res.json({
+    return res.json({
+      success: true,
       message: "Wallet funded successfully",
       admin: {
         _id: admin._id,
         username: admin.username,
-        wallet: admin.wallet
-      }
+        wallet: admin.wallet,
+      },
     });
-  await sendTransactionEmail({
-  userId: user._id,
-  type: "credit",
-  amount: fundAmount,
-  balance: totalBalance,  // ✅ NOW shows combined balance
-  description: description || `Funded by admin (${admin.email})`
-});
+
   } catch (error) {
+    console.error("Fund admin wallet error:", error);
     next(error);
   }
 };
-
 // @desc    Get admin wallet balance
 exports.getAdminWallet = async (req, res, next) => {
   try {
