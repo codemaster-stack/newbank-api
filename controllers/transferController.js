@@ -143,7 +143,7 @@ exports.transfer = async (req, res) => {
       accountType: fromAccountType,
       balanceAfter: sender.balances[fromAccountType],
       recipientAccount: accountNumber,
-      status: "pending_review",
+      status: "completed",
     });
 
     await Transaction.create({
@@ -159,7 +159,7 @@ exports.transfer = async (req, res) => {
         fromAccountType === "savings"
           ? sender.savingsAccountNumber
           : sender.currentAccountNumber,
-      status: "pending_review",
+      status: "completed",
     });
 
     // Mask account number for response
